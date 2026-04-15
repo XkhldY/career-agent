@@ -1,0 +1,19 @@
+# Environment and secrets
+.env
+*.env
+!*.env.example
+
+# Virtual environment
+.venv/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfplan
+
+# Chroma vector store data
+data/chroma_db/
+
+# Generated replay for batch jobs crawl
+scripts/replay_jobs_crawl.json

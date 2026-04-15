@@ -1,0 +1,3 @@
+# Use backend/requirements.txt for backend + agents. From repo root:
+# pip install -r backend/requirements.txt
+-r backend/requirements.txt
