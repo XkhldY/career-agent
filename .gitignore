@@ -1,19 +1,45 @@
-# Environment and secrets
-.env
-*.env
-!*.env.example
-
-# Virtual environment
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
 .venv/
+venv/
+
+# Environment
+.env.local
+.env.*.local
+.env
+
+# Build outputs
+build/
+dist/
+out/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Terraform
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.*
-terraform/*.tfplan
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform/terraform.tfvars.example
 
-# Chroma vector store data
-data/chroma_db/
+# Logs
+*.log
+logs/
 
-# Generated replay for batch jobs crawl
-scripts/replay_jobs_crawl.json
+# Misc
+.cache/
+.claude/
+_bmad*/
+deployment-outputs.json
