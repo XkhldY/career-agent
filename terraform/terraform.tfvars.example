@@ -1,0 +1,29 @@
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and customize for your deployment
+
+aws_region              = "us-east-1"
+project_name            = "recruitment"
+db_name                 = "recruitment"
+db_username             = "recruitment_admin"
+db_instance_class       = "db.t3.micro"
+chroma_instance_type    = "t3.small"
+
+# Application
+app_instance_type       = "t3.small"
+asg_min_size            = 2
+asg_max_size            = 4
+asg_desired_capacity    = 2
+
+# Domain and DNS
+domain_name             = "pom100.com"
+app_domain              = "career.pom100.com"
+
+# GitHub Repository (use your fork or clone URL)
+github_repo             = "https://github.com/yourusername/agentics.git"
+github_branch           = "main"
+
+# CIDR blocks allowed to connect (restrict in production)
+allowed_cidr_blocks     = ["0.0.0.0/0"]
+
+# Optional: SSL Certificate ARN (for HTTPS)
+# ssl_certificate_arn   = "arn:aws:acm:us-east-1:123456789:certificate/..."
