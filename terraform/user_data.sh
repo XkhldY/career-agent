@@ -1,6 +1,6 @@
 #!/bin/bash
-set -e
 exec > /var/log/user-data.log 2>&1
+set -x
 
 echo "=== User Data Script Started at $(date) ==="
 
@@ -40,12 +40,12 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ENVEOF
 
 echo "=== Building backend image ==="
-cd backend
-docker build -t agentics-backend .
+cd backend || { echo "Failed to cd to backend"; exit 1; }
+docker build -t agentics-backend . || { echo "Backend build failed"; exit 1; }
 
 echo "=== Building frontend image ==="
-cd ../frontend
-docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 -t agentics-frontend .
+cd ../frontend || { echo "Failed to cd to frontend"; exit 1; }
+docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 -t agentics-frontend . || { echo "Frontend build failed"; exit 1; }
 
 cd /home/ec2-user/app
 
