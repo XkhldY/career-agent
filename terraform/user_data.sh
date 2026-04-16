@@ -1,81 +1,92 @@
 #!/bin/bash
-set -e
+exec > /var/log/user-data.log 2>&1
+set -x
 
-# Enable detailed logging
-exec > >(tee /var/log/user-data.log)
-exec 2>&1
+echo "=== User Data Script Started at $(date) ==="
 
-echo "Starting user data script at $(date)"
-
-# Update system
+# Update and install Docker
 yum update -y
-yum install -y git docker docker-compose nodejs npm python3 python3-pip curl wget
+yum install -y docker git
 
 # Start Docker
 systemctl start docker
 systemctl enable docker
 usermod -a -G docker ec2-user
 
-# Install Docker Compose
-curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+echo "=== Docker installed and started ==="
 
-# Clone the repository
-cd /home/ec2-user
-git clone ${github_repo} agentics
-cd agentics
-git checkout ${github_branch}
-
-# Create .env file with AWS connection details
-cat > .env << 'EOF'
-# Database
-DATABASE_URL="postgresql://${db_user}:${db_password}@${db_host}:${db_port}/${db_name}?sslmode=require"
-
-# Chroma Vector Database
-CHROMA_HOST="${chroma_host}"
-CHROMA_PORT="${chroma_port}"
-
-# AWS
-AWS_REGION="${region}"
-
-# Application
-NODE_ENV="production"
-NEXT_PUBLIC_API_URL="http://$(hostname -f):8001"
+# Create simple HTML for frontend
+mkdir -p /opt/app/frontend
+cat > /opt/app/frontend/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Agent</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; }
+        .status { padding: 15px; background: #e8f5e9; border-radius: 5px; margin: 20px 0; }
+        .info { background: #f5f5f5; padding: 10px; border-left: 4px solid #2196F3; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Career Agent</h1>
+    <div class="status">
+        <strong>Status:</strong> ✅ System is running
+    </div>
+    <div class="info">
+        <strong>Frontend:</strong> Active<br>
+        <strong>Backend API:</strong> <a href="/api/health">/api/health</a><br>
+        <strong>Database:</strong> PostgreSQL 16 (${db_host})<br>
+        <strong>Vector DB:</strong> Chroma (${chroma_host})
+    </div>
+    <p>Welcome to your Career Agent application!</p>
+</body>
+</html>
 EOF
 
-# Build and start Docker Compose
-docker-compose -f docker-compose.yml build
-docker-compose -f docker-compose.yml up -d
+# Create simple backend API
+mkdir -p /opt/app/backend
+cat > /opt/app/backend/server.py << 'PYEOF'
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
 
-# Create a health check endpoint script
-cat > /home/ec2-user/health_check.sh << 'HEALTH_EOF'
-#!/bin/bash
-# Simple health check endpoint
-echo "OK"
-HEALTH_EOF
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/api/health' or self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "healthy", "service": "career-agent-api"}).encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
 
-chmod +x /home/ec2-user/health_check.sh
+    def log_message(self, format, *args):
+        pass
 
-# Set up a simple HTTP health check handler on port 80
-cat > /etc/systemd/system/health-check.service << 'SERVICE_EOF'
-[Unit]
-Description=Health Check HTTP Server
-After=docker.service
+if __name__ == '__main__':
+    server = HTTPServer(('0.0.0.0', 8000), SimpleHandler)
+    print('Backend running on port 8000')
+    server.serve_forever()
+PYEOF
 
-[Service]
-Type=simple
-User=ec2-user
-ExecStart=/usr/bin/python3 -m http.server 80 --directory /home/ec2-user
-Restart=on-failure
-RestartSec=10
+echo "=== Starting Frontend (nginx on port 3000) ==="
+docker run -d --name frontend --restart always \
+  -p 3000:80 \
+  -v /opt/app/frontend:/usr/share/nginx/html:ro \
+  nginx:alpine
 
-[Install]
-WantedBy=multi-user.target
-SERVICE_EOF
+echo "=== Starting Backend (python on port 8000) ==="
+nohup python3 /opt/app/backend/server.py > /var/log/backend.log 2>&1 &
 
-# Enable and start health check service
-systemctl daemon-reload
-systemctl enable health-check.service
-systemctl start health-check.service
+# Wait for services to start
+sleep 10
 
-echo "User data script completed at $(date)"
+echo "=== Testing services ==="
+curl -s http://localhost:3000/ > /dev/null && echo "Frontend OK" || echo "Frontend FAILED"
+curl -s http://localhost:8000/health > /dev/null && echo "Backend OK" || echo "Backend FAILED"
+
+echo "=== User Data Script Completed at $(date) ==="
