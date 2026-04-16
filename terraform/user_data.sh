@@ -39,7 +39,7 @@ AWS_REGION=${region}
 
 # Application
 NODE_ENV=production
-NEXT_PUBLIC_API_URL=http://localhost:8001
+NEXT_PUBLIC_API_URL=http://localhost:8000
 EOF
 
 echo "=== Building backend image ==="
@@ -48,14 +48,14 @@ docker build -t agentics-backend . || echo "Backend build failed"
 
 echo "=== Building frontend image ==="
 cd ../frontend
-docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8001 -t agentics-frontend . || echo "Frontend build failed"
+docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 -t agentics-frontend . || echo "Frontend build failed"
 
 cd /home/ec2-user/app
 
 echo "=== Starting backend container ==="
 docker run -d --name backend \
   --restart unless-stopped \
-  -p 8001:8000 \
+  -p 8000:8000 \
   --env-file .env \
   agentics-backend || echo "Backend start failed"
 
@@ -75,6 +75,6 @@ docker logs frontend --tail=50
 
 echo "=== Testing services ==="
 curl -s http://localhost:3000/ > /dev/null && echo "Frontend OK" || echo "Frontend FAILED"
-curl -s http://localhost:8001/health > /dev/null && echo "Backend OK" || echo "Backend FAILED"
+curl -s http://localhost:8000/health > /dev/null && echo "Backend OK" || echo "Backend FAILED"
 
 echo "=== User Data Script Completed at $(date) ==="
