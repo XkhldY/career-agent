@@ -26,8 +26,3 @@ output "app_dns_record" {
   description = "DNS record for the application"
   value       = aws_route53_record.app.fqdn
 }
-
-output "alb_dns_name" {
-  description = "ALB DNS name"
-  value       = aws_lb.main.dns_name
-}

@@ -77,7 +77,7 @@ data "aws_ami" "app_ami" {
   owners      = ["amazon"]
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp3"]
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 }
 
@@ -158,18 +158,17 @@ resource "aws_autoscaling_group" "app" {
     aws_lb_target_group.app_frontend.arn
   ]
 
-  tags = [
-    {
-      key                 = "Project"
-      value               = var.project_name
-      propagate_at_launch = true
-    },
-    {
-      key                 = "Name"
-      value               = "${var.project_name}-asg-instance"
-      propagate_at_launch = true
-    }
-  ]
+  tag {
+    key                 = "Project"
+    value               = var.project_name
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "${var.project_name}-asg-instance"
+    propagate_at_launch = true
+  }
 
   lifecycle {
     create_before_destroy = true
@@ -270,47 +269,32 @@ resource "aws_lb_target_group" "app_frontend" {
   }
 }
 
-# ALB listener for HTTP (redirects to HTTPS)
+# ALB listener for HTTP - forwards to frontend by default
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
-
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_frontend.arn
   }
 }
 
-# ALB listener for HTTPS (requires certificate)
-# Note: You'll need to upload an SSL certificate to ACM first
-# resource "aws_lb_listener" "https" {
-#   load_balancer_arn = aws_lb.main.arn
-#   port              = 443
-#   protocol          = "HTTPS"
-#   ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
-#   certificate_arn   = var.ssl_certificate_arn
-#
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.app_backend.arn
-#   }
-# }
+# ALB listener rule to forward API traffic to backend
+resource "aws_lb_listener_rule" "api_backend" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 1
 
-# For now, use HTTP listener
-resource "aws_lb_listener" "app_backend" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.app_backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*", "/health"]
+    }
   }
 }
 
