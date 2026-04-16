@@ -25,3 +25,9 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for load balancer."""
+    return {"status": "healthy"}

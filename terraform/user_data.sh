@@ -21,10 +21,10 @@ echo "=== Docker installed and started ==="
 
 # Clone the repository
 cd /home/ec2-user
-if [ ! -d "app" ]; then
-  git clone ${github_repo} app
+if [ ! -d "career-agent" ]; then
+  git clone ${github_repo} career-agent
 fi
-cd app
+cd career-agent
 git fetch origin
 git checkout ${github_branch}
 git pull origin ${github_branch}
@@ -40,34 +40,38 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ENVEOF
 
 echo "=== Building backend image ==="
-cd backend || { echo "Failed to cd to backend"; exit 1; }
-docker build -t agentics-backend . || { echo "Backend build failed"; exit 1; }
+cd backend
+docker build -t career-agent-backend .
 
 echo "=== Building frontend image ==="
-cd ../frontend || { echo "Failed to cd to frontend"; exit 1; }
-docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 -t agentics-frontend . || { echo "Frontend build failed"; exit 1; }
+cd ../frontend
+docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 -t career-agent-frontend .
 
-cd /home/ec2-user/app
+cd /home/ec2-user/career-agent
 
 echo "=== Starting backend container ==="
-docker run -d --name backend \
+docker run -d --name career-agent-backend \
   --restart unless-stopped \
   -p 8000:8000 \
   --env-file .env \
-  agentics-backend
+  career-agent-backend
 
 echo "=== Starting frontend container ==="
-docker run -d --name frontend \
+docker run -d --name career-agent-frontend \
   --restart unless-stopped \
   -p 3000:3000 \
-  agentics-frontend
+  career-agent-frontend
 
 # Wait for services
 sleep 30
 
 echo "=== Checking service status ==="
 docker ps
-docker logs backend --tail=50 || true
-docker logs frontend --tail=50 || true
+docker logs career-agent-backend --tail=50 || true
+docker logs career-agent-frontend --tail=50 || true
+
+echo "=== Testing services ==="
+curl -s http://localhost:3000/ > /dev/null && echo "Frontend OK" || echo "Frontend FAILED"
+curl -s http://localhost:8000/health > /dev/null && echo "Backend OK" || echo "Backend FAILED"
 
 echo "=== User Data Script Completed at $(date) ==="
