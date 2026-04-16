@@ -30,7 +30,7 @@ git checkout ${github_branch}
 git pull origin ${github_branch}
 
 # Create .env file with AWS resources
-cat > .env << 'ENVEOF'
+cat > .env << ENVEOF
 DATABASE_URL=postgresql://${db_user}:${db_password}@${db_host}:${db_port}/${db_name}
 CHROMA_HOST=${chroma_host}
 CHROMA_PORT=${chroma_port}
